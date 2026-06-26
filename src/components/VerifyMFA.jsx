@@ -64,45 +64,52 @@ export default function VerifyMFA({ onSuccess }) {
   }
 
   async function handleLogout() {
+    setLoading(true)
     await supabase.auth.signOut()
+    setLoading(false)
   }
 
   return (
     <main className="auth-page">
       <form className="auth-card" onSubmit={handleVerify}>
-        <h1>Verifikasi 2FA</h1>
+        <div className="auth-header">
+          <h1>Verifikasi 2FA</h1>
+          <p>Masukkan kode dari aplikasi Google Authenticator.</p>
+        </div>
 
-        <p>
-          Masukkan kode dari aplikasi Google Authenticator.
-        </p>
-
-        <label htmlFor="mfa-code">Kode 6 Digit</label>
-        <input
-          id="mfa-code"
-          type="text"
-          inputMode="numeric"
-          maxLength="6"
-          value={code}
-          required
-          autoFocus
-          onChange={(event) =>
-            setCode(event.target.value.replace(/\D/g, ''))
-          }
-        />
+        <div className="auth-form-group">
+          <label htmlFor="mfa-code">Kode 6 Digit</label>
+          <input
+            id="mfa-code"
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            value={code}
+            required
+            autoFocus
+            placeholder="Masukkan kode 6 digit"
+            onChange={(event) =>
+              setCode(event.target.value.replace(/\D/g, ''))
+            }
+          />
+        </div>
 
         {message && <p className="error-message">{message}</p>}
 
-        <button type="submit" disabled={loading}>
-          {loading ? 'Memverifikasi...' : 'Verifikasi'}
-        </button>
+        <div className="auth-actions">
+          <button className="auth-submit" type="submit" disabled={loading}>
+            {loading ? 'Memverifikasi...' : 'Verifikasi'}
+          </button>
 
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={handleLogout}
-        >
-          Kembali ke Login
-        </button>
+          <button
+            type="button"
+            className="auth-secondary"
+            onClick={handleLogout}
+            disabled={loading}
+          >
+            Kembali ke Login
+          </button>
+        </div>
       </form>
     </main>
   )

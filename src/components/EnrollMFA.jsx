@@ -9,6 +9,7 @@ export default function EnrollMFA({ onSuccess }) {
   const [secret, setSecret] = useState('')
   const [code, setCode] = useState('')
   const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (hasStarted.current) {
@@ -18,6 +19,8 @@ export default function EnrollMFA({ onSuccess }) {
     hasStarted.current = true
 
     async function enroll() {
+      setMessage('')
+
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
         friendlyName: 'Google Authenticator',
@@ -38,10 +41,18 @@ export default function EnrollMFA({ onSuccess }) {
 
   async function handleVerify(event) {
     event.preventDefault()
+    setLoading(true)
     setMessage('')
 
     if (!/^\d{6}$/.test(code)) {
       setMessage('Masukkan kode 6 digit.')
+      setLoading(false)
+      return
+    }
+
+    if (!factorId) {
+      setMessage('Data 2FA belum siap. Tunggu beberapa saat.')
+      setLoading(false)
       return
     }
 
@@ -52,6 +63,7 @@ export default function EnrollMFA({ onSuccess }) {
 
     if (challengeError) {
       setMessage(challengeError.message)
+      setLoading(false)
       return
     }
 
@@ -63,20 +75,21 @@ export default function EnrollMFA({ onSuccess }) {
 
     if (verifyError) {
       setMessage('Kode tidak valid: ' + verifyError.message)
+      setLoading(false)
       return
     }
 
+    setLoading(false)
     onSuccess()
   }
 
   return (
     <main className="auth-page">
       <form className="auth-card" onSubmit={handleVerify}>
-        <h1>Aktifkan 2FA</h1>
-
-        <p>
-          Pindai QR code berikut menggunakan Google Authenticator.
-        </p>
+        <div className="auth-header">
+          <h1>Aktifkan 2FA</h1>
+          <p>Pindai QR code berikut menggunakan Google Authenticator.</p>
+        </div>
 
         {qrCode && (
           <img
@@ -93,23 +106,30 @@ export default function EnrollMFA({ onSuccess }) {
           </div>
         )}
 
-        <label htmlFor="enroll-code">Kode 6 Digit</label>
-        <input
-          id="enroll-code"
-          type="text"
-          inputMode="numeric"
-          maxLength="6"
-          value={code}
-          required
-          onChange={(event) =>
-            setCode(event.target.value.replace(/\D/g, ''))
-          }
-        />
+        <div className="auth-form-group">
+          <label htmlFor="enroll-code">Kode 6 Digit</label>
+          <input
+            id="enroll-code"
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            value={code}
+            required
+            placeholder="Masukkan kode 6 digit"
+            onChange={(event) =>
+              setCode(event.target.value.replace(/\D/g, ''))
+            }
+          />
+        </div>
 
         {message && <p className="error-message">{message}</p>}
 
-        <button type="submit" disabled={!factorId}>
-          Aktifkan 2FA
+        <button
+          className="auth-submit"
+          type="submit"
+          disabled={!factorId || loading}
+        >
+          {loading ? 'Mengaktifkan...' : 'Aktifkan 2FA'}
         </button>
       </form>
     </main>
