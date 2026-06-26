@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AdminPanel from './AdminPanel'
@@ -20,10 +19,7 @@ export default function Dashboard() {
       } = await supabase.auth.getUser()
 
       if (userError) {
-        setMessage(
-          'Gagal mendapatkan data pengguna: ' +
-            userError.message
-        )
+        setMessage('Gagal mendapatkan data pengguna: ' + userError.message)
         setLoading(false)
         return
       }
@@ -34,28 +30,19 @@ export default function Dashboard() {
         return
       }
 
-      const {
-        data: profileData,
-        error: profileError,
-      } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, email, role')
         .eq('id', user.id)
         .single()
 
       if (profileError) {
-        setMessage(
-          'Gagal memuat profil: ' +
-            profileError.message
-        )
+        setMessage('Gagal memuat profil: ' + profileError.message)
         setLoading(false)
         return
       }
 
-      const {
-        data: documentData,
-        error: documentError,
-      } = await supabase
+      const { data: documentData, error: documentError } = await supabase
         .from('documents')
         .select('id, title, file_path, created_at')
         .order('created_at', {
@@ -63,10 +50,7 @@ export default function Dashboard() {
         })
 
       if (documentError) {
-        setMessage(
-          'Gagal memuat dokumen: ' +
-            documentError.message
-        )
+        setMessage('Gagal memuat dokumen: ' + documentError.message)
         setLoading(false)
         return
       }
@@ -99,10 +83,7 @@ export default function Dashboard() {
         return
       }
 
-      const {
-        data: fileBlob,
-        error: downloadError,
-      } = await supabase.storage
+      const { data: fileBlob, error: downloadError } = await supabase.storage
         .from('dokumen-tugas')
         .download(documentItem.file_path)
 
@@ -125,13 +106,8 @@ export default function Dashboard() {
       const objectUrl = URL.createObjectURL(fileBlob)
 
       const fileName =
-        documentItem.file_path
-          .split('/')
-          .pop() || 'dokumen.pdf'
+        documentItem.file_path.split('/').pop() || 'dokumen.pdf'
 
-      /*
-       * Membuka file di tab baru.
-       */
       if (mode === 'inline') {
         const newWindow = window.open(
           objectUrl,
@@ -141,16 +117,10 @@ export default function Dashboard() {
 
         if (!newWindow) {
           URL.revokeObjectURL(objectUrl)
-          setMessage(
-            'Dokumen gagal dibuka. Izinkan pop-up pada browser.'
-          )
+          setMessage('Dokumen gagal dibuka. Izinkan pop-up pada browser.')
           return
         }
 
-        /*
-         * Object URL tidak langsung dihapus karena masih
-         * digunakan oleh tab baru.
-         */
         setTimeout(() => {
           URL.revokeObjectURL(objectUrl)
         }, 60000)
@@ -158,15 +128,8 @@ export default function Dashboard() {
         return
       }
 
-      /*
-       * Mengunduh file.
-       *
-       * window.document digunakan agar tidak bertabrakan
-       * dengan data dokumen dari database.
-       */
       if (mode === 'download') {
-        const anchor =
-          window.document.createElement('a')
+        const anchor = window.document.createElement('a')
 
         anchor.href = objectUrl
         anchor.download = fileName
@@ -177,10 +140,6 @@ export default function Dashboard() {
         anchor.click()
         anchor.remove()
 
-        /*
-         * Berikan waktu kepada browser untuk memulai
-         * proses download sebelum URL dihapus.
-         */
         setTimeout(() => {
           URL.revokeObjectURL(objectUrl)
         }, 1000)
@@ -195,9 +154,7 @@ export default function Dashboard() {
 
       setMessage(
         `Terjadi kesalahan ketika ${
-          mode === 'download'
-            ? 'mengunduh'
-            : 'membuka'
+          mode === 'download' ? 'mengunduh' : 'membuka'
         } dokumen: ${
           error instanceof Error
             ? error.message
@@ -210,96 +167,112 @@ export default function Dashboard() {
   async function handleLogout() {
     setMessage('')
 
-    const { error } =
-      await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
 
     if (error) {
-      setMessage(
-        'Gagal logout: ' + error.message
-      )
+      setMessage('Gagal logout: ' + error.message)
     }
   }
 
   return (
     <main className="dashboard-page">
-      <header className="dashboard-header">
-        <div>
+      <header className="dashboard-hero">
+        <div className="dashboard-hero-content">
+          <span className="dashboard-kicker">Portal Keamanan Dokumen</span>
+
           <h1>Portal Dokumen Tugas</h1>
 
           <p>
-            {profile?.email} · {profile?.role}
+            Kelola dan akses dokumen tugas secara aman dengan autentikasi
+            berlapis.
           </p>
+
+          <div className="profile-row">
+            <span className="profile-email">{profile?.email || '-'}</span>
+            <span className={`role-badge ${profile?.role === 'admin' ? 'admin' : 'user'}`}>
+              {profile?.role === 'admin' ? 'Admin' : 'User'}
+            </span>
+          </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-        >
+        <button type="button" className="logout-button" onClick={handleLogout}>
           Logout
         </button>
       </header>
 
-      {message && (
-        <p className="error-message">
-          {message}
-        </p>
-      )}
+      <section className="dashboard-stats">
+        <article className="stat-card">
+          <span>Total Dokumen</span>
+          <strong>{documents.length}</strong>
+          <p>Dokumen tersedia di portal</p>
+        </article>
 
-      {profile?.role === 'admin' && (
-        <AdminPanel onChanged={loadData} />
-      )}
+        <article className="stat-card">
+          <span>Status Akun</span>
+          <strong>{profile?.role === 'admin' ? 'Admin' : 'User'}</strong>
+          <p>Hak akses pengguna aktif</p>
+        </article>
+
+        <article className="stat-card">
+          <span>Keamanan</span>
+          <strong>2FA Aktif</strong>
+          <p>Autentikasi dua faktor digunakan</p>
+        </article>
+      </section>
+
+      {message && <p className="error-message dashboard-message">{message}</p>}
+
+      {profile?.role === 'admin' && <AdminPanel onChanged={loadData} />}
 
       <section className="document-section">
-        <h2>Daftar Dokumen</h2>
+        <div className="section-header">
+          <div>
+            <span className="section-label">Dokumen</span>
+            <h2>Daftar Dokumen</h2>
+          </div>
 
-        {loading && (
-          <p>Memuat dokumen...</p>
+          <span className="document-count">{documents.length} file</span>
+        </div>
+
+        {loading && <p className="loading-text">Memuat dokumen...</p>}
+
+        {!loading && documents.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-icon">PDF</div>
+            <h3>Belum ada dokumen</h3>
+            <p>Dokumen yang diunggah admin akan tampil di bagian ini.</p>
+          </div>
         )}
-
-        {!loading &&
-          documents.length === 0 && (
-            <p>Belum ada dokumen.</p>
-          )}
 
         <div className="document-list">
           {documents.map((documentItem) => (
-            <article
-              className="document-card"
-              key={documentItem.id}
-            >
-              <div>
-                <h3>{documentItem.title}</h3>
+            <article className="document-card" key={documentItem.id}>
+              <div className="document-info">
+                <div className="document-icon">PDF</div>
 
-                <small>
-                  Ditambahkan pada{' '}
-                  {new Date(
-                    documentItem.created_at
-                  ).toLocaleString('id-ID')}
-                </small>
+                <div>
+                  <h3>{documentItem.title}</h3>
+
+                  <small>
+                    Ditambahkan pada{' '}
+                    {new Date(documentItem.created_at).toLocaleString('id-ID')}
+                  </small>
+                </div>
               </div>
 
               <div className="document-actions">
                 <button
                   type="button"
-                  onClick={() =>
-                    requestFile(
-                      documentItem,
-                      'inline'
-                    )
-                  }
+                  className="document-button primary"
+                  onClick={() => requestFile(documentItem, 'inline')}
                 >
                   Buka
                 </button>
 
                 <button
                   type="button"
-                  className="secondary-button"
-                  onClick={() =>
-                    requestFile(
-                      documentItem,
-                      'download'
-                    )
-                  }
+                  className="document-button secondary"
+                  onClick={() => requestFile(documentItem, 'download')}
                 >
                   Download
                 </button>
@@ -311,4 +284,3 @@ export default function Dashboard() {
     </main>
   )
 }
-

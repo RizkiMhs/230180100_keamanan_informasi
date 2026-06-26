@@ -63,9 +63,6 @@ export default function AdminPanel({ onChanged }) {
     setMessage('')
 
     try {
-      /*
-       * Memeriksa pengguna yang sedang login.
-       */
       const {
         data: { user },
         error: userError,
@@ -79,12 +76,6 @@ export default function AdminPanel({ onChanged }) {
         throw new Error('Pengguna tidak ditemukan.')
       }
 
-      /*
-       * Membuat nama file yang aman dan unik.
-       *
-       * Contoh:
-       * 1750843000000-uuid-laporan-tugas.pdf
-       */
       const safeFileName = createSafeFileName(file.name)
 
       const uniqueFileName = [
@@ -93,13 +84,7 @@ export default function AdminPanel({ onChanged }) {
         safeFileName,
       ].join('-')
 
-      /*
-       * Upload file lokal ke bucket dokumen-tugas.
-       */
-      const {
-        data: uploadData,
-        error: uploadError,
-      } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from(BUCKET_NAME)
         .upload(uniqueFileName, file, {
           contentType: file.type || 'application/pdf',
@@ -108,27 +93,16 @@ export default function AdminPanel({ onChanged }) {
         })
 
       if (uploadError) {
-        throw new Error(
-          'Gagal mengunggah file: ' + uploadError.message
-        )
+        throw new Error('Gagal mengunggah file: ' + uploadError.message)
       }
 
-      /*
-       * Path tidak diketik pengguna.
-       * Path diambil langsung dari hasil upload.
-       */
       const uploadedFilePath = uploadData.path
 
-      /*
-       * Menyimpan judul dan path file ke tabel documents.
-       */
-      const { error: insertError } = await supabase
-        .from('documents')
-        .insert({
-          title: title.trim(),
-          file_path: uploadedFilePath,
-          created_by: user.id,
-        })
+      const { error: insertError } = await supabase.from('documents').insert({
+        title: title.trim(),
+        file_path: uploadedFilePath,
+        created_by: user.id,
+      })
 
       if (insertError) {
         throw new Error(
@@ -161,64 +135,76 @@ export default function AdminPanel({ onChanged }) {
 
   return (
     <section className="admin-panel">
-      <h2>Tambah Dokumen</h2>
+      <div className="section-header">
+        <div>
+          <span className="section-label">Admin Panel</span>
+          <h2>Tambah Dokumen</h2>
+        </div>
 
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="document-title">
-          Judul Dokumen
-        </label>
+        <span className="admin-badge">Admin Only</span>
+      </div>
 
-        <input
-          id="document-title"
-          type="text"
-          value={title}
-          required
-          disabled={loading}
-          placeholder="Masukkan judul dokumen"
-          onChange={(event) =>
-            setTitle(event.target.value)
-          }
-        />
+      <form className="admin-form" onSubmit={handleSubmit}>
+        <div className="form-field">
+          <label htmlFor="document-title">Judul Dokumen</label>
 
-        <label htmlFor="document-file">
-          Pilih File PDF
-        </label>
+          <input
+            id="document-title"
+            type="text"
+            value={title}
+            required
+            disabled={loading}
+            placeholder="Contoh: Panduan Keamanan Informasi"
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </div>
 
-        <input
-          id="document-file"
-          type="file"
-          accept=".pdf,application/pdf"
-          required
-          disabled={loading}
-          onChange={handleFileChange}
-        />
+        <div className="form-field">
+          <label htmlFor="document-file">File PDF</label>
 
-        {file && (
-          <div className="selected-file">
-            <p>
-              <strong>File:</strong> {file.name}
-            </p>
+          <label className="file-upload-box" htmlFor="document-file">
+            <div className="file-upload-icon">PDF</div>
 
-            <p>
-              <strong>Ukuran:</strong>{' '}
-              {(file.size / 1024 / 1024).toFixed(2)} MB
-            </p>
-          </div>
-        )}
+            <div>
+              <strong>
+                {file ? file.name : 'Klik untuk memilih file PDF'}
+              </strong>
+
+              <span>
+                {file
+                  ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
+                  : 'Maksimal 10 MB, format PDF'}
+              </span>
+            </div>
+          </label>
+
+          <input
+            id="document-file"
+            className="file-input"
+            type="file"
+            accept=".pdf,application/pdf"
+            required
+            disabled={loading}
+            onChange={handleFileChange}
+          />
+        </div>
 
         {message && (
-          <p className="form-message">
+          <p
+            className={`form-message ${
+              message.includes('berhasil') ? 'success' : 'error'
+            }`}
+          >
             {message}
           </p>
         )}
 
         <button
+          className="upload-button"
           type="submit"
           disabled={loading || !file}
         >
-          {loading
-            ? 'Mengunggah...'
-            : 'Upload Dokumen'}
+          {loading ? 'Mengunggah...' : 'Upload Dokumen'}
         </button>
       </form>
     </section>
